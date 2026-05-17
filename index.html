@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RelayGrid — Competitive Intelligence</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0a0a0a;
+    --surface:   #111111;
+    --card:      #181818;
+    --border:    #2a2a2a;
+    --border-lt: #333333;
+    --text:      #e8e8e8;
+    --muted:     #888888;
+    --dim:       #555555;
+    --white:     #ffffff;
+
+    /* Accent per competitor */
+    --rg:        #ffffff;
+    --gain:      #f0b429;
+    --rocket:    #58a6ff;
+    --arrows:    #39d353;
+    --sf:        #0ea5e9;
+    --status-q:  #999999;
+
+    /* Status */
+    --win:       #39d353;
+    --warn:      #f0b429;
+    --risk:      #f85149;
+    --neu:       #8b949e;
+
+    --font: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    --mono: "Courier New", Courier, monospace;
+    --radius: 6px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(10,10,10,.95);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 24px; height: 52px; gap: 32px;
+  }
+  .topbar-brand { font-size: 13px; font-weight: 700; color: var(--white); letter-spacing: .04em; white-space: nowrap; }
+  .topbar-brand span { color: var(--muted); font-weight: 400; }
+  .topbar-nav { display: flex; gap: 4px; flex: 1; }
+  .nav-btn {
+    padding: 5px 12px; border-radius: var(--radius); border: none;
+    background: transparent; color: var(--muted); font-family: var(--font);
+    font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s;
+    white-space: nowrap;
+  }
+  .nav-btn:hover, .nav-btn.active { background: var(--border); color: var(--white); }
+  .topbar-meta { font-size: 11px; color: var(--dim); white-space: nowrap; }
+
+  /* ── LAYOUT ── */
+  .shell { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 52px); }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    position: sticky; top: 52px; height: calc(100vh - 52px); overflow-y: auto;
+  }
+  .sidebar-section { padding: 0 16px 16px; }
+  .sidebar-label { font-size: 10px; font-weight: 700; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px; }
+  .comp-chip {
+    display: flex; align-items: center; gap: 8px;
+    padding: 7px 10px; border-radius: var(--radius); cursor: pointer;
+    transition: background .12s; margin-bottom: 2px;
+  }
+  .comp-chip:hover, .comp-chip.active { background: var(--border); }
+  .comp-chip .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .comp-chip .name { font-size: 12px; color: var(--text); }
+  .comp-chip .threat { font-size: 10px; color: var(--muted); margin-left: auto; }
+  .sidebar-divider { border: none; border-top: 1px solid var(--border); margin: 12px 16px; }
+  .last-updated { padding: 0 16px; font-size: 10px; color: var(--dim); }
+
+  /* ── MAIN ── */
+  .main { padding: 28px 32px; overflow-y: auto; }
+
+  /* ── SECTION VIEWS ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── PAGE HEADER ── */
+  .page-header { margin-bottom: 28px; }
+  .page-title { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .page-sub { font-size: 13px; color: var(--muted); }
+
+  /* ── SUMMARY STATS ── */
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px;
+  }
+  .stat-card .label { font-size: 11px; color: var(--muted); margin-bottom: 6px; letter-spacing: .03em; }
+  .stat-card .value { font-size: 26px; font-weight: 700; color: var(--white); line-height: 1; margin-bottom: 4px; }
+  .stat-card .sublabel { font-size: 11px; color: var(--dim); }
+  .stat-card.win .value { color: var(--win); }
+  .stat-card.warn .value { color: var(--warn); }
+  .stat-card.risk .value { color: var(--risk); }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 16px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .card-header h3 { font-size: 13px; font-weight: 700; color: var(--white); flex: 1; }
+  .card-header .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
+  .badge-win  { background: rgba(57,211,83,.15);  color: var(--win);  border: 1px solid rgba(57,211,83,.3); }
+  .badge-warn { background: rgba(240,180,41,.12); color: var(--warn); border: 1px solid rgba(240,180,41,.3); }
+  .badge-risk { background: rgba(248,81,73,.12);  color: var(--risk); border: 1px solid rgba(248,81,73,.3); }
+  .badge-neu  { background: rgba(139,148,158,.12);color: var(--neu);  border: 1px solid rgba(139,148,158,.3); }
+  .card-body { padding: 16px; }
+
+  /* ── COMPETITOR PROFILE CARD ── */
+  .comp-header {
+    display: flex; align-items: flex-start; gap: 14px;
+    padding: 16px; border-bottom: 1px solid var(--border);
+  }
+  .comp-logo {
+    width: 40px; height: 40px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 800; flex-shrink: 0;
+    color: var(--bg);
+  }
+  .comp-info h2 { font-size: 16px; font-weight: 700; color: var(--white); }
+  .comp-info .tagline { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .comp-meta { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+  .meta-pill {
+    font-size: 11px; padding: 3px 8px; border-radius: 4px;
+    background: var(--surface); color: var(--muted); border: 1px solid var(--border);
+  }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    text-align: left; padding: 9px 12px; font-size: 10px; font-weight: 700;
+    color: var(--dim); letter-spacing: .06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,.025); }
+  tbody td { padding: 10px 12px; color: var(--text); vertical-align: top; }
+  tbody td.muted { color: var(--muted); }
+  tbody td.mono { font-family: var(--mono); color: var(--muted); font-size: 11px; }
+  .highlight-row { background: rgba(255,255,255,.03); }
+
+  /* ── PILL TAG ── */
+  .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 3px; font-weight: 600; }
+  .tag-win  { background: rgba(57,211,83,.15);  color: var(--win); }
+  .tag-warn { background: rgba(240,180,41,.12); color: var(--warn); }
+  .tag-risk { background: rgba(248,81,73,.12);  color: var(--risk); }
+  .tag-neu  { background: rgba(139,148,158,.12);color: var(--neu); }
+
+  /* ── FEATURE MATRIX ── */
+  .feat-yes  { color: var(--win);  font-size: 14px; }
+  .feat-no   { color: var(--risk); font-size: 14px; }
+  .feat-part { color: var(--warn); font-size: 14px; }
+
+  /* ── AI SUMMARY BOX ── */
+  .ai-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px; margin-bottom: 20px;
+    position: relative;
+  }
+  .ai-box::before {
+    content: 'AI SUMMARY';
+    position: absolute; top: -1px; left: 16px;
+    font-size: 9px; font-weight: 700; letter-spacing: .1em;
+    background: var(--surface); color: var(--muted);
+    padding: 0 6px; transform: translateY(-50%);
+  }
+  .ai-box p { font-size: 12.5px; color: var(--text); line-height: 1.6; margin-bottom: 8px; }
+  .ai-box p:last-child { margin-bottom: 0; }
+  .ai-box strong { color: var(--white); }
+  .ai-bullets { margin-top: 10px; }
+  .ai-bullet { display: flex; gap: 8px; margin-bottom: 6px; font-size: 12px; color: var(--muted); }
+  .ai-bullet::before { content: '→'; color: var(--dim); flex-shrink: 0; }
+
+  /* ── REVIEW CARD ── */
+  .review-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; margin-bottom: 12px;
+  }
+  .review-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .review-source { font-size: 10px; font-weight: 700; color: var(--muted); letter-spacing: .05em; }
+  .stars { color: var(--warn); font-size: 12px; letter-spacing: 1px; }
+  .review-quote { font-size: 12px; color: var(--text); line-height: 1.55; font-style: italic; }
+  .review-meta { font-size: 10px; color: var(--dim); margin-top: 6px; }
+
+  /* ── TIMELINE ── */
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 4px; bottom: 4px; width: 1px; background: var(--border); }
+  .tl-item { position: relative; margin-bottom: 16px; }
+  .tl-dot { position: absolute; left: -18px; top: 4px; width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+  .tl-dot.win  { background: var(--win); }
+  .tl-dot.warn { background: var(--warn); }
+  .tl-dot.risk { background: var(--risk); }
+  .tl-date { font-size: 10px; color: var(--dim); margin-bottom: 2px; font-family: var(--mono); }
+  .tl-title { font-size: 12px; font-weight: 600; color: var(--white); margin-bottom: 2px; }
+  .tl-body { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+  /* ── PROGRESS BAR ── */
+  .prog-row { margin-bottom: 10px; }
+  .prog-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .prog-label .val { color: var(--text); font-weight: 600; }
+  .prog-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+  .prog-fill { height: 100%; border-radius: 2px; transition: width .4s; }
+
+  /* ── WIN/LOSS ── */
+  .wl-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 6px; }
+  .wl-win  { background: var(--win);  }
+  .wl-loss { background: var(--risk); }
+  .wl-legend { display: flex; gap: 16px; font-size: 10px; color: var(--muted); }
+  .wl-legend span { display: flex; align-items: center; gap: 4px; }
+  .wl-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; }
+  .wl-legend .l-win::before  { background: var(--win); }
+  .wl-legend .l-loss::before { background: var(--risk); }
+
+  /* ── PRICING TIER ── */
+  .price-tier {
+    border: 1px solid var(--border); border-radius: var(--radius);
+    overflow: hidden; margin-bottom: 12px;
+  }
+  .price-tier-hd {
+    padding: 10px 14px; background: var(--surface);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .price-tier-name { font-size: 12px; font-weight: 700; color: var(--white); }
+  .price-amount { font-size: 14px; font-weight: 700; color: var(--warn); font-family: var(--mono); }
+  .price-tier-body { padding: 10px 14px; }
+  .price-feat { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+  .price-feat::before { content: '• '; color: var(--dim); }
+
+  /* ── SIGNAL ALERT ── */
+  .alert {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 12px 14px; border-radius: var(--radius); margin-bottom: 8px;
+    border: 1px solid;
+  }
+  .alert.risk  { background: rgba(248,81,73,.08);  border-color: rgba(248,81,73,.25); }
+  .alert.warn  { background: rgba(240,180,41,.07); border-color: rgba(240,180,41,.25); }
+  .alert.info  { background: rgba(88,166,255,.07); border-color: rgba(88,166,255,.25); }
+  .alert-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+  .alert-body { font-size: 12px; color: var(--text); line-height: 1.5; }
+  .alert-body strong { color: var(--white); }
+  .alert-date { font-size: 10px; color: var(--dim); font-family: var(--mono); margin-top: 3px; }
+
+  /* ── SECTION HEADER ── */
+  .section-hd { margin: 24px 0 14px; display: flex; align-items: center; gap: 10px; }
+  .section-hd h3 { font-size: 12px; font-weight: 700; color: var(--white); text-transform: uppercase; letter-spacing: .06em; }
+  .section-hd .line { flex: 1; height: 1px; background: var(--border); }
+
+  /* ── COMPETITOR NAV TABS ── */
+  .comp-tabs { display: flex; gap: 4px; margin-bottom: 20px; flex-wrap: wrap; }
+  .comp-tab {
+    padding: 6px 14px; border-radius: var(--radius); border: 1px solid var(--border);
+    background: var(--surface); color: var(--muted); font-size: 12px; font-weight: 500;
+    cursor: pointer; transition: all .15s; font-family: var(--font);
+  }
+  .comp-tab:hover { border-color: var(--border-lt); color: var(--text); }
+  .comp-tab.active { background: var(--card); color: var(--white); border-color: var(--border-lt); }
+
+  /* ── COMPETITOR PROFILE ── */
+  .profile { display: none; }
+  .profile.active { display: block; }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-lt); }
+
+  /* ── UTIL ── */
+  .mb16 { margin-bottom: 16px; }
+  .mb24 { margin-bottom: 24px; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .text-win  { color: var(--win); }
+  .text-warn { color: var(--warn); }
+  .text-risk { color: var(--risk); }
+  .text-muted { color: var(--muted); }
+  .text-sm { font-size: 11px; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════ TOP BAR -->
+<header class="topbar">
+  <div class="topbar-brand">RELAYGRID <span>/ Competitive Intelligence</span></div>
+  <nav class="topbar-nav">
+    <button class="nav-btn active" onclick="showView('dashboard')">Overview</button>
+    <button class="nav-btn" onclick="showView('profiles')">Competitor Profiles</button>
+    <button class="nav-btn" onclick="showView('pricing')">Pricing Intel</button>
+    <button class="nav-btn" onclick="showView('features')">Feature Matrix</button>
+    <button class="nav-btn" onclick="showView('messaging')">Messaging</button>
+    <button class="nav-btn" onclick="showView('reviews')">Reviews</button>
+    <button class="nav-btn" onclick="showView('signals')">Signals & Changes</button>
+  </nav>
+  <div class="topbar-meta">Updated May 2025 &nbsp;·&nbsp; Q2 2025</div>
+</header>
+
+<div class="shell">
+
+<!-- ═══════════════════════════════════════════ SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-section">
+    <div class="sidebar-label">Competitors</div>
+    <div class="comp-chip active" onclick="filterComp('all')">
+      <div class="dot" style="background:var(--muted)"></div>
+      <span class="name">All</span>
+    </div>
+    <div class="comp-chip" onclick="filterComp('gainsight')">
+      <div class="dot" style="background:var(--gain)"></div>
+      <span class="name">Gainsight</span>
+      <span class="threat" style="color:var(--warn)">HIGH</span>
+    </div>
+    <div class="comp-chip" onclick="filterComp('rocketlane')">
+      <div class="dot" style="background:var(--rocket)"></div>
+      <span class="name">Rocketlane</span>
+      <span class="threat" style="color:var(--warn)">HIGH</span>
+    </div>
+    <div class="comp-chip" onclick="filterComp('arrows')">
+      <div class="dot" style="background:var(--arrows)"></div>
+      <span class="name">Arrows</span>
+      <span class="threat" style="color:var(--muted)">MED</span>
+    </div>
+    <div class="comp-chip" onclick="filterComp('salesforce')">
+      <div class="dot" style="background:var(--sf)"></div>
+      <span class="name">Salesforce (build)</span>
+      <span class="threat" style="color:var(--warn)">HIGH</span>
+    </div>
+    <div class="comp-chip" onclick="filterComp('statusquo')">
+      <div class="dot" style="background:var(--status-q)"></div>
+      <span class="name">Status Quo</span>
+      <span class="threat" style="color:var(--risk)">CORE</span>
+    </div>
+  </div>
+
+  <hr class="sidebar-divider">
+
+  <div class="sidebar-section">
+    <div class="sidebar-label">Win Rates vs.</div>
+    <div style="padding: 0 2px;">
+      <div class="prog-row">
+        <div class="prog-label"><span>Gainsight</span><span class="val text-win">71%</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:71%;background:var(--win)"></div></div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-label"><span>Rocketlane</span><span class="val text-warn">58%</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:58%;background:var(--warn)"></div></div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-label"><span>Salesforce build</span><span class="val text-warn">48%</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:48%;background:var(--warn)"></div></div>
+      </div>
+      <div class="prog-row">
+        <div class="prog-label"><span>Status quo</span><span class="val text-win">62%</span></div>
+        <div class="prog-track"><div class="prog-fill" style="width:62%;background:var(--win)"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="sidebar-divider">
+  <div class="last-updated">Last full review: May 14, 2025<br>Next review: Aug 1, 2025</div>
+</aside>
+
+<!-- ═══════════════════════════════════════════ MAIN -->
+<main class="main">
+
+<!-- ──────────────────── VIEW: DASHBOARD ────────────────────── -->
+<section class="view active" id="view-dashboard">
+
+  <div class="page-header">
+    <div class="page-title">Competitive Intelligence — Command Center</div>
+    <div class="page-sub">RelayGrid vs. Gainsight · Rocketlane · Arrows · Salesforce build · Status quo &nbsp;|&nbsp; Focus: B2B fintech onboarding orchestration</div>
+  </div>
+
+  <div class="ai-box">
+    <p><strong>AI Summary — May 2025:</strong> RelayGrid holds a structurally differentiated position: the only purpose-built fintech onboarding orchestration platform. No competitor has claimed the category name. The primary competitive risks are (1) Salesforce/Rocketlane expanding their fintech vertical language, and (2) the "build it internally" objection, which accounts for 38% of loss situations. Win rates are highest vs. Gainsight (71%) because the pre-live vs. post-live distinction is easy to articulate. Win rates are lowest vs. internal builds (48%) because engineering culture variability is hard to predict. The Customer Portal is the single highest-converting demo element across all competitive scenarios.</p>
+    <div class="ai-bullets">
+      <div class="ai-bullet">Category moat: 18-month window before a funded competitor claims "fintech onboarding orchestration" — execute category creation now</div>
+      <div class="ai-bullet">SOC 2 Type II is a blocker in enterprise deals where procurement is strict — P0 priority for Q2 2025</div>
+      <div class="ai-bullet">Rocketlane is the only direct-ish competitor with fintech customers — monitor their vertical-specific messaging closely</div>
+      <div class="ai-bullet">Arrows ($500–$1,250/month, HubSpot-native) appeals to smaller teams; not a direct threat to the $95K Scale tier ICP</div>
+    </div>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat-card win">
+      <div class="label">OVERALL WIN RATE</div>
+      <div class="value">54%</div>
+      <div class="sublabel">Target: 65% by H2 2025</div>
+    </div>
+    <div class="stat-card warn">
+      <div class="label">COMPETITIVE DEALS</div>
+      <div class="value">38%</div>
+      <div class="sublabel">Of pipeline has named competitor</div>
+    </div>
+    <div class="stat-card win">
+      <div class="label">CATEGORY CLAIMED</div>
+      <div class="value">0</div>
+      <div class="sublabel">Competitors using "onboarding orchestration"</div>
+    </div>
+    <div class="stat-card risk">
+      <div class="label">DEALS LOST — BUILD</div>
+      <div class="value">38%</div>
+      <div class="sublabel">Of losses = "build it internally"</div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><h3>⚡ Active Alerts</h3></div>
+      <div class="card-body">
+        <div class="alert risk">
+          <div class="alert-icon">🔴</div>
+          <div>
+            <div class="alert-body"><strong>Rocketlane:</strong> Updated website copy now includes "implementation orchestration" — first time they've used orchestration language. Monitor for fintech vertical page.</div>
+            <div class="alert-date">Detected May 2025</div>
+          </div>
+        </div>
+        <div class="alert warn">
+          <div class="alert-icon">🟡</div>
+          <div>
+            <div class="alert-body"><strong>Gainsight:</strong> Salesforce OAuth security incident (Salesforce revoked tokens) — active customer concern. Use in deals where Gainsight is incumbent.</div>
+            <div class="alert-date">Detected April 2025</div>
+          </div>
+        </div>
+        <div class="alert warn">
+          <div class="alert-icon">🟡</div>
+          <div>
+            <div class="alert-body"><strong>Salesforce AgentForce:</strong> Announced autonomous CS agents — monitor for any onboarding orchestration use case positioning in roadmap.</div>
+            <div class="alert-date">Detected Q1 2025</div>
+          </div>
+        </div>
+        <div class="alert info">
+          <div class="alert-icon">🔵</div>
+          <div>
+            <div class="alert-body"><strong>Arrows:</strong> Launched dynamic branching on Business plan ($1,250/mo). Widens their feature gap vs. Rocketlane but still no fintech compliance layer.</div>
+            <div class="alert-date">Detected March 2025</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>📊 Win / Loss by Competitor</h3></div>
+      <div class="card-body">
+        <div style="margin-bottom:16px">
+          <div class="flex-between mb16" style="margin-bottom:8px"><span style="font-size:12px;color:var(--text)">vs. Gainsight</span><span style="font-size:11px;color:var(--muted)">71% / 29%</span></div>
+          <div class="wl-bar"><div class="wl-win" style="width:71%"></div><div class="wl-loss" style="width:29%"></div></div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div class="flex-between" style="margin-bottom:8px"><span style="font-size:12px;color:var(--text)">vs. Rocketlane</span><span style="font-size:11px;color:var(--muted)">58% / 42%</span></div>
+          <div class="wl-bar"><div class="wl-win" style="width:58%"></div><div class="wl-loss" style="width:42%"></div></div>
+        </div>
+        <div style="margin-bottom:16px">
+          <div class="flex-between" style="margin-bottom:8px"><span style="font-size:12px;color:var(--text)">vs. Salesforce (build)</span><span style="font-size:11px;color:var(--muted)">48% / 52%</span></div>
+          <div class="wl-bar"><div class="wl-win" style="width:48%"></div><div class="wl-loss" style="width:52%"></div></div>
+        </div>
+        <div>
+          <div class="flex-between" style="margin-bottom:8px"><span style="font-size:12px;color:var(--text)">vs. Status quo</span><span style="font-size:11px;color:var(--muted)">62% / 38%</span></div>
+          <div class="wl-bar"><div class="wl-win" style="width:62%"></div><div class="wl-loss" style="width:38%"></div></div>
+        </div>
+        <div class="wl-legend" style="margin-top:12px"><span class="l-win">Win</span><span class="l-loss">Loss</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-header"><h3>🛡️ Our Moat</h3><span class="badge badge-win">STRONG</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Fintech-native templates</div><div class="tl-body">50+ KYB, AML, compliance, integration workflow templates. 18-month build to replicate.</div></div>
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Category ownership</div><div class="tl-body">"Onboarding orchestration" — unclaimed by any competitor. Window: ~18 months.</div></div>
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Fintech integrations</div><div class="tl-body">Plaid, Stripe, Marqeta, MX — native connectors covering 80%+ of fintech infra stack.</div></div>
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">SOC 2 Type I certified</div><div class="tl-body">Type II in progress (Q2 2025). Blocking 2 enterprise deals currently.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>⚠️ Competitive Gaps</h3><span class="badge badge-warn">MONITOR</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot risk"></div><div class="tl-title">SOC 2 Type II</div><div class="tl-body">Missing. Gainsight has it. Blocking large enterprise deals. P0 for Q2.</div></div>
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Analyst recognition</div><div class="tl-body">Gainsight is a Forrester Wave Leader (Q4 2025). RelayGrid not yet in analyst coverage.</div></div>
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Brand awareness</div><div class="tl-body">Cold outbound reply rate 9% vs. warm 18%. Category recognition is low outside referral network.</div></div>
+          <div class="tl-item"><div class="tl-dot neu"></div><div class="tl-title">Customer count</div><div class="tl-body">11 customers vs. Gainsight's thousands. Proof point gap for risk-averse enterprise buyers.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>🎯 Recommended Plays</h3><span class="badge badge-neu">Q2 2025</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Lead with Customer Portal</div><div class="tl-body">Highest-converting demo element in all competitive situations. Never skip it.</div></div>
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Use Gainsight security incident</div><div class="tl-body">Salesforce OAuth incident (Apr 2025) — raise in deals where Gainsight is incumbent.</div></div>
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Build vs. buy calculator</div><div class="tl-body">4–6 month build + $60–100K eng cost + ongoing maintenance. Walk prospect through it live.</div></div>
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Pre-live vs. post-live framing</div><div class="tl-body">Gainsight is post-live. RelayGrid is pre-live. This distinction wins 71% of Gainsight deals.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── VIEW: PROFILES ────────────────────── -->
+<section class="view" id="view-profiles">
+  <div class="page-header">
+    <div class="page-title">Competitor Profiles</div>
+    <div class="page-sub">Deep-dive on each competitive situation. Click to expand.</div>
+  </div>
+
+  <div class="comp-tabs">
+    <button class="comp-tab active" onclick="showProfile('gain')">Gainsight</button>
+    <button class="comp-tab" onclick="showProfile('rocket')">Rocketlane</button>
+    <button class="comp-tab" onclick="showProfile('arrows')">Arrows</button>
+    <button class="comp-tab" onclick="showProfile('sf')">Salesforce / Build</button>
+    <button class="comp-tab" onclick="showProfile('sq')">Status Quo</button>
+  </div>
+
+  <!-- GAINSIGHT -->
+  <div class="profile active" id="profile-gain">
+    <div class="ai-box">
+      <p><strong>AI Summary — Gainsight:</strong> Our most frequently cited competitor — but rarely a true head-to-head. The pre-live vs. post-live distinction wins 71% of Gainsight situations. <strong>Key insight:</strong> Gainsight's April 2025 Salesforce OAuth security incident is an active vulnerability — raise it proactively in deals where Gainsight is the incumbent or the reference. Gainsight implementations take 4–6 months and cost $50–120K in services; our 11-day go-live is a credible contrast. Their G2 rating (4.4/5) masks significant UX complexity complaints. Median contracts land at ~$50K/year but scale quickly.</p>
+      <div class="ai-bullets">
+        <div class="ai-bullet">Win angle: "Gainsight starts after the customer is live. RelayGrid gets them there 38 days faster."</div>
+        <div class="ai-bullet">Don't attack: Acknowledge Gainsight is excellent for post-live CS — then draw the line clearly</div>
+        <div class="ai-bullet">Use the security incident carefully — raise as a vendor risk conversation, not a gotcha</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><h3>Profile</h3><span class="badge badge-warn">HIGH THREAT</span></div>
+        <div class="comp-header">
+          <div class="comp-logo" style="background:var(--gain)">G</div>
+          <div class="comp-info">
+            <h2>Gainsight CS</h2>
+            <div class="tagline">Post-sale customer success platform. Category creator.</div>
+            <div class="comp-meta">
+              <span class="meta-pill">Founded 2009</span><span class="meta-pill">~$1.1B valuation</span><span class="meta-pill">Vista Equity</span><span class="meta-pill">Forrester Leader Q4 2025</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="section-hd"><h3>Facts</h3><div class="line"></div></div>
+          <table><tbody>
+            <tr><td class="muted" style="width:40%">ICP</td><td>Enterprise SaaS, 50–5,000 employee CS teams</td></tr>
+            <tr><td class="muted">Primary use</td><td>Health scoring, QBRs, renewals, lifecycle playbooks</td></tr>
+            <tr><td class="muted">Onboarding focus</td><td>Post-live only — not pre-live orchestration</td></tr>
+            <tr><td class="muted">Implementation</td><td>5–6 months (G2 verified), $50–120K in services</td></tr>
+            <tr><td class="muted">Security</td><td>SOC 2 Type II, ISO 27001, GDPR, HIPAA</td></tr>
+            <tr><td class="muted">G2 rating</td><td>4.4 / 5 (CS product) — UX complexity often cited</td></tr>
+            <tr><td class="muted">Incident</td><td>⚠️ Salesforce OAuth token revocation — Apr 2025</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Win/Loss — vs. Gainsight</h3></div>
+        <div class="card-body">
+          <div class="section-hd"><h3>Why We Win</h3><div class="line"></div></div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Pre-live vs. post-live distinction</div><div class="tl-body">Clearly different problems. Prospect often has both needs. We complement, not replace.</div></div>
+            <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Time-to-value</div><div class="tl-body">11 days live vs. 5–6 months for Gainsight. ROI is immediate; Gainsight's is deferred.</div></div>
+            <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Price</div><div class="tl-body">Gainsight Essentials: $24K+/year for 10 users. Scale compounds to $168K+ for 50 users. We're $95K flat.</div></div>
+          </div>
+          <div class="section-hd"><h3>Why We Lose</h3><div class="line"></div></div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-dot risk"></div><div class="tl-title">SOC 2 Type II</div><div class="tl-body">Gainsight has it. We have Type I. Blocking in strict enterprise procurement.</div></div>
+            <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Analyst recognition</div><div class="tl-body">Gainsight is the Forrester Wave Leader. RelayGrid not yet in analyst coverage.</div></div>
+            <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Internal champion is Gainsight power user</div><div class="tl-body">When a VP CS is already invested in Gainsight, they resist adding another tool.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROCKETLANE -->
+  <div class="profile" id="profile-rocket">
+    <div class="ai-box">
+      <p><strong>AI Summary — Rocketlane:</strong> The closest direct overlap. Rocketlane is a professional services automation (PSA) + onboarding platform for SaaS — strong on project management, customer portals, and templates. <strong>Key watch:</strong> May 2025 they started using "orchestration" language. They have fintech customers but no fintech-native compliance layer. Pricing is seat-based ($19–99/user/month), which anchors differently than our flat-ACV model. Win angle: RelayGrid is fintech-specific with AI sequencing and compliance awareness baked in. Rocketlane requires heavy template configuration per customer type.</p>
+      <div class="ai-bullets">
+        <div class="ai-bullet">They're the only competitor with real onboarding overlap — treat seriously, not dismissively</div>
+        <div class="ai-bullet">Their "SmartFill" AI feature (auto-fill project info) is directionally competitive — watch Q3 roadmap</div>
+        <div class="ai-bullet">Their seat-based pricing at enterprise scale can exceed our flat ACV — run the math for each deal</div>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><h3>Profile</h3><span class="badge badge-warn">HIGH THREAT</span></div>
+        <div class="comp-header">
+          <div class="comp-logo" style="background:var(--rocket)">R</div>
+          <div class="comp-info">
+            <h2>Rocketlane</h2>
+            <div class="tagline">PSA + customer onboarding platform for SaaS teams.</div>
+            <div class="comp-meta">
+              <span class="meta-pill">Founded 2020</span><span class="meta-pill">Series B funded</span><span class="meta-pill">~250 employees</span>
+            </div>
+          </div>
+        </div>
+        <div class="card-body">
+          <table><tbody>
+            <tr><td class="muted" style="width:40%">ICP</td><td>SaaS implementation / professional services teams</td></tr>
+            <tr><td class="muted">Primary use</td><td>Client onboarding, project management, resource planning</td></tr>
+            <tr><td class="muted">Fintech depth</td><td>General SaaS — no compliance templates or fintech integrations</td></tr>
+            <tr><td class="muted">Pricing model</td><td>Seat-based: $19–$99/user/month (billed annually)</td></tr>
+            <tr><td class="muted">Customer portal</td><td>Yes — included in all plans</td></tr>
+            <tr><td class="muted">AI feature</td><td>"SmartFill" — auto-fills project metadata (limited)</td></tr>
+            <tr><td class="muted">⚠️ Language watch</td><td>Now using "orchestration" in website copy — May 2025</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><h3>Win/Loss — vs. Rocketlane</h3></div>
+        <div class="card-body">
+          <div class="section-hd"><h3>Why We Win</h3><div class="line"></div></div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Fintech-native compliance</div><div class="tl-body">KYB, AML, Plaid/Stripe integration steps out of box. Rocketlane requires custom template build.</div></div>
+            <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">AI sequencing intelligence</div><div class="tl-body">Our AI Workflow Engine understands compliance dependencies. Rocketlane's AI is metadata fill, not orchestration.</div></div>
+            <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Flat ACV pricing</div><div class="tl-body">Rocketlane seat-based at 20+ users (~$100K+) exceeds our $95K flat. Run the calculator.</div></div>
+          </div>
+          <div class="section-hd"><h3>Why We Lose</h3><div class="line"></div></div>
+          <div class="timeline">
+            <div class="tl-item"><div class="tl-dot risk"></div><div class="tl-title">Brand recognition</div><div class="tl-body">Rocketlane is better known in the onboarding space. Prospects may have already seen their demo.</div></div>
+            <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Broader feature set</div><div class="tl-body">Resource management, time tracking, financial management — we don't have these. Can matter for PS teams.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ARROWS -->
+  <div class="profile" id="profile-arrows">
+    <div class="ai-box">
+      <p><strong>AI Summary — Arrows:</strong> HubSpot-native onboarding tool, well-suited for small-to-mid SaaS teams. <strong>Not a direct threat</strong> to RelayGrid's ICP — they serve different segments. Arrows ($500–$1,250/month) targets teams using HubSpot deals as their primary record; RelayGrid targets Series B+ fintech at $95K ACV. The overlap is narrow: if a fintech uses HubSpot as their primary CRM and is evaluating onboarding tools, Arrows may appear in the conversation.</p>
+      <div class="ai-bullets">
+        <div class="ai-bullet">Arrows is 20–40% cheaper than Rocketlane — buyers use it to negotiate Rocketlane down</div>
+        <div class="ai-bullet">Dynamic branching (launched March 2025) narrows feature gap with Rocketlane</div>
+        <div class="ai-bullet">No fintech compliance, no AI orchestration, no enterprise security — clean differentiation</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Profile</h3><span class="badge badge-neu">MEDIUM THREAT</span></div>
+      <div class="comp-header">
+        <div class="comp-logo" style="background:var(--arrows)">A</div>
+        <div class="comp-info">
+          <h2>Arrows</h2>
+          <div class="tagline">HubSpot-native customer onboarding. Lightweight, affordable.</div>
+          <div class="comp-meta"><span class="meta-pill">Founded 2021</span><span class="meta-pill">HubSpot Marketplace</span><span class="meta-pill">SMB / Mid-market</span></div>
+        </div>
+      </div>
+      <div class="card-body">
+        <table><tbody>
+          <tr><td class="muted" style="width:40%">ICP</td><td>SMB–mid-market SaaS, HubSpot-centric CS teams</td></tr>
+          <tr><td class="muted">Pricing</td><td>Growth: $500/mo · Business: $1,250/mo · Enterprise: custom</td></tr>
+          <tr><td class="muted">Key strength</td><td>Deep HubSpot bi-directional sync, 50+ data points</td></tr>
+          <tr><td class="muted">Fintech depth</td><td>None — generic SaaS onboarding only</td></tr>
+          <tr><td class="muted">AI features</td><td>None confirmed</td></tr>
+          <tr><td class="muted">Security</td><td>SSO on Enterprise only; no SOC 2 information publicly available</td></tr>
+          <tr><td class="muted">When they appear</td><td>When prospect uses HubSpot as primary CRM and is cost-sensitive</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- SALESFORCE / BUILD -->
+  <div class="profile" id="profile-sf">
+    <div class="ai-box">
+      <p><strong>AI Summary — Salesforce / Build Internally:</strong> This is our most common loss scenario (38% of losses). It's not really a Salesforce competition — it's a make-vs-buy decision. The "we'll build it in Salesforce" objection typically comes from companies with strong RevOps or engineering teams and a CTO who prefers internal tooling. The math almost always favors RelayGrid, but the culture doesn't always follow the math. <strong>Key move:</strong> Don't attack Salesforce. Ask the prospect to calculate their build cost. $60–100K in eng time + 4–6 months delay + permanent maintenance = ROI case that makes itself. Salesforce AgentForce (autonomous CS agents, Q1 2025) is worth monitoring — if it develops onboarding orchestration positioning, it becomes a direct threat.</p>
+      <div class="ai-bullets">
+        <div class="ai-bullet">Don't say they can't build it — say ask whether they should</div>
+        <div class="ai-bullet">Opportunity cost framing: every month they build is a month of deferred ARR</div>
+        <div class="ai-bullet">Disqualify early: if the CTO is already committed to the build and is on the call, adjust win probability</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Profile</h3><span class="badge badge-warn">HIGH THREAT — Loss Scenario</span></div>
+      <div class="card-body">
+        <table><tbody>
+          <tr><td class="muted" style="width:40%">Scenario</td><td>"We'll build onboarding orchestration in Salesforce / internally"</td></tr>
+          <tr><td class="muted">Typical company</td><td>Strong eng team, RevOps capability, CTO who prefers internal tools</td></tr>
+          <tr><td class="muted">Build timeline</td><td>4–6 months (typical estimate); often 8–12 months in reality</td></tr>
+          <tr><td class="muted">Build cost</td><td>$60–100K in eng opportunity cost; ongoing 0.25–0.5 FTE maintenance</td></tr>
+          <tr><td class="muted">Deferred TTL cost</td><td>Every month of build = $X in delayed ARR per customer × volume</td></tr>
+          <tr><td class="muted">AgentForce risk</td><td>⚠️ Salesforce autonomous agents announced — monitor for onboarding use case</td></tr>
+          <tr><td class="muted">Win rate</td><td>48% — weakest competitive scenario. Disqualify fast if culture is strongly anti-vendor</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS QUO -->
+  <div class="profile" id="profile-sq">
+    <div class="ai-box">
+      <p><strong>AI Summary — Status Quo:</strong> The default competitor in 100% of deals. "We'll manage with what we have" feels free but costs $10–15K per customer in deferred ARR, 60%+ of CS capacity, and a 22% go-dark rate. The win play is making the cost of inaction visible and concrete. <strong>Key move:</strong> Walk the ROI calculation live — TTL × ACV ÷ 365 × customers per year. At $100K ACV and 20 customers per year, inaction costs ~$208K in deferred ARR annually. RelayGrid costs $95K. The math makes itself. Win rate (62%) is solid but can be improved by getting to the CRO earlier — they feel the ARR recognition pain most acutely.</p>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Profile</h3><span class="badge badge-risk">CORE CHALLENGE</span></div>
+      <div class="card-body">
+        <table><tbody>
+          <tr><td class="muted" style="width:40%">Scenario</td><td>"We'll manage with what we have (Jira/Notion/spreadsheets/email)"</td></tr>
+          <tr><td class="muted">Deferred ARR cost</td><td>~$10–15K per customer at $100K ACV (38 days × ACV ÷ 365)</td></tr>
+          <tr><td class="muted">CS capacity cost</td><td>60%+ of CS team time on onboarding = $90–120K FTE cost misdirected</td></tr>
+          <tr><td class="muted">Go-dark risk</td><td>22% of enterprise deals disengage post-signature under broken onboarding</td></tr>
+          <tr><td class="muted">Annual impact (example)</td><td>$208K deferred ARR at $100K ACV × 20 customers/year</td></tr>
+          <tr><td class="muted">Win play</td><td>ROI calculator live — do the math with the prospect, don't assert it</td></tr>
+          <tr><td class="muted">Win rate</td><td>62% when CRO is in the room; lower when champion is implementation manager only</td></tr>
+        </tbody></table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── VIEW: PRICING ────────────────────── -->
+<section class="view" id="view-pricing">
+  <div class="page-header">
+    <div class="page-title">Pricing Intelligence</div>
+    <div class="page-sub">All pricing data sourced from public pages, Vendr transaction data, and G2 reports — May 2025</div>
+  </div>
+
+  <div class="ai-box">
+    <p><strong>AI Summary — Pricing:</strong> RelayGrid at $95K flat (Scale tier) is well-positioned relative to enterprise alternatives. Gainsight reaches $168K+ for 50 users before implementation fees. Rocketlane's seat-based model exceeds $95K at 20+ users. The real competitive pricing threat is Arrows ($500–1,250/month) for smaller teams, but that's not our ICP. <strong>Key insight:</strong> We are likely under-priced. Beta testing $110K on the next 3 Scale tier deals is the right move (see Pricing doc). The ROI case at $95K is almost always net-positive within 8 months — this is our primary price objection response.</p>
+    <div class="ai-bullets">
+      <div class="ai-bullet">RelayGrid payback: ~8 months at Scale tier. Gainsight payback: 18+ months after implementation costs</div>
+      <div class="ai-bullet">Gainsight buyers negotiate 20–35% off list price for multi-year deals — use this in head-to-head deals</div>
+      <div class="ai-bullet">Rocketlane seat math: 20 users × $69/seat/month × 12 = $16,560/year — much less than us, but they're not comparable</div>
+    </div>
+  </div>
+
+  <div class="grid-2 mb24">
+    <div class="card">
+      <div class="card-header"><h3>RelayGrid Pricing (Current)</h3><span class="badge badge-win">SOURCE OF TRUTH</span></div>
+      <div class="card-body">
+        <div class="price-tier"><div class="price-tier-hd"><span class="price-tier-name">Launch</span><span class="price-amount">$60K / year</span></div><div class="price-tier-body"><div class="price-feat">Up to 20 enterprise onboardings/year</div><div class="price-feat">Core workflow engine (manual)</div><div class="price-feat">Email notifications, basic reporting</div><div class="price-feat">Slack + Jira integration</div><div class="price-feat">Customer Portal: $12K add-on</div></div></div>
+        <div class="price-tier" style="border-color:var(--warn)"><div class="price-tier-hd"><span class="price-tier-name">Scale ★ ICP TIER</span><span class="price-amount">$95K / year</span></div><div class="price-tier-body"><div class="price-feat">Up to 60 enterprise onboardings/year</div><div class="price-feat">AI Workflow Engine (included)</div><div class="price-feat">Customer Portal (included)</div><div class="price-feat">Plaid/Stripe/Marqeta/MX connectors</div><div class="price-feat">Dedicated CSM</div></div></div>
+        <div class="price-tier"><div class="price-tier-hd"><span class="price-tier-name">Enterprise</span><span class="price-amount">$140K+ / year</span></div><div class="price-tier-body"><div class="price-feat">Unlimited onboardings</div><div class="price-feat">Custom compliance workflows</div><div class="price-feat">SSO, advanced RBAC, SLA guarantees</div><div class="price-feat">Full API access, white-glove impl.</div></div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>Competitive Pricing Benchmarks</h3></div>
+      <div class="card-body">
+        <div class="table-wrap"><table>
+          <thead><tr><th>Vendor</th><th>Entry Price</th><th>Enterprise Estimate</th><th>Model</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr class="highlight-row"><td><strong>RelayGrid</strong></td><td class="text-win">$60K/yr</td><td class="text-win">$140K+/yr</td><td>Flat ACV</td><td class="mono">Internal</td></tr>
+            <tr><td>Gainsight CS</td><td class="text-risk">~$24K/yr (10 users)</td><td class="text-risk">$168K+/yr (50 users)</td><td>Per seat + impl fees</td><td class="mono">Vendr / TrustRadius</td></tr>
+            <tr><td>Rocketlane</td><td>$19/seat/mo (min 5)</td><td>$99/seat/mo (Enterprise)</td><td>Per seat</td><td class="mono">Public page</td></tr>
+            <tr><td>Arrows</td><td>$500/mo (Growth)</td><td>$1,250/mo (Business)</td><td>Flat per org</td><td class="mono">Public page</td></tr>
+            <tr><td>Salesforce (build)</td><td>$60–100K eng cost</td><td>+0.25–0.5 FTE ongoing</td><td>Internal build</td><td class="mono">Est. PMM</td></tr>
+          </tbody>
+        </table></div>
+        <div style="margin-top:14px;padding:12px;background:var(--surface);border-radius:4px;border:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:700">PMM NOTE</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">We are likely under-priced. Testing $110K on next 3 Scale deals. Median Gainsight contract ~$50K/yr before implementation adds $50–120K. Our all-in is still lower with a faster ROI.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb24">
+    <div class="card-header"><h3>ROI Comparison at $100K ACV / 20 Enterprise Customers/Year</h3></div>
+    <div class="card-body">
+      <div class="table-wrap"><table>
+        <thead><tr><th>Vendor</th><th>Year 1 Cost</th><th>Time to Value</th><th>Payback Period</th><th>ARR Timing Benefit</th><th>PMM Assessment</th></tr></thead>
+        <tbody>
+          <tr class="highlight-row"><td><strong>RelayGrid Scale</strong></td><td class="text-win">$95K</td><td class="text-win">11 days</td><td class="text-win">~8 months</td><td class="text-win">$208K/yr sooner</td><td><span class="tag tag-win">Strong ROI</span></td></tr>
+          <tr><td>Gainsight (post-live only)</td><td class="text-warn">$50K–168K + $50–120K impl</td><td>5–6 months</td><td>18+ months</td><td>Not applicable</td><td><span class="tag tag-warn">High cost</span></td></tr>
+          <tr><td>Rocketlane (20 users)</td><td>~$66K/yr</td><td>2–4 weeks</td><td>Est. 10–12 months</td><td>Partial (not fintech-native)</td><td><span class="tag tag-warn">Generic config</span></td></tr>
+          <tr><td>Build internally</td><td>$60–100K eng + time</td><td>4–6 months</td><td>Never — ongoing cost</td><td>Delayed by build time</td><td><span class="tag tag-risk">Hidden costs</span></td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── VIEW: FEATURES ────────────────────── -->
+<section class="view" id="view-features">
+  <div class="page-header">
+    <div class="page-title">Feature Comparison Matrix</div>
+    <div class="page-sub">✓ = full support · ~ = partial/limited · ✗ = not available</div>
+  </div>
+
+  <div class="ai-box">
+    <p><strong>AI Summary — Features:</strong> RelayGrid has clean differentiation in three dimensions that matter to fintech buyers: (1) compliance-aware sequencing with dependency logic, (2) fintech-native integration connectors (Plaid, Stripe, Marqeta, MX), and (3) real-time customer portal. No competitor checks all three. The area where competitors have an edge: breadth of project management features (resource planning, time tracking — Rocketlane) and post-live lifecycle management (health scoring, QBRs — Gainsight). These are features we deliberately do not build. Our gap is SOC 2 Type II — expected Q2 2025.</p>
+  </div>
+
+  <div class="card mb24">
+    <div class="card-body" style="padding:0">
+    <div class="table-wrap"><table>
+      <thead><tr>
+        <th style="min-width:220px">Feature</th>
+        <th>RelayGrid</th>
+        <th>Gainsight CS</th>
+        <th>Rocketlane</th>
+        <th>Arrows</th>
+        <th>Salesforce (build)</th>
+      </tr></thead>
+      <tbody>
+        <tr><td colspan="6" style="padding:8px 12px;background:var(--surface);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.06em">CORE ONBOARDING</td></tr>
+        <tr><td>Customer portal (branded)</td><td class="feat-yes">✓</td><td class="feat-part">~</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-part">~</td></tr>
+        <tr><td>Workflow templates</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-part">~</td></tr>
+        <tr><td>AI task sequencing</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-part">~ (SmartFill only)</td><td class="feat-no">✗</td><td class="feat-no">✗</td></tr>
+        <tr><td>Dependency-aware logic</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-part">~</td><td class="feat-no">✗</td><td class="feat-no">✗</td></tr>
+        <tr><td>Real-time blocker detection</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-part">~</td><td class="feat-no">✗</td><td class="feat-no">✗</td></tr>
+        <tr><td>Mutual action plans</td><td class="feat-yes">✓</td><td class="feat-part">~</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-no">✗</td></tr>
+
+        <tr><td colspan="6" style="padding:8px 12px;background:var(--surface);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.06em">FINTECH-SPECIFIC</td></tr>
+        <tr><td>KYB / KYC workflow templates</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-part">~ (custom)</td></tr>
+        <tr><td>AML screening integration</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-part">~ (custom)</td></tr>
+        <tr><td>Plaid integration</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td></tr>
+        <tr><td>Stripe integration</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td></tr>
+        <tr><td>Marqeta / MX integration</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td></tr>
+        <tr><td>Compliance step sequencing</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-part">~ (custom)</td></tr>
+
+        <tr><td colspan="6" style="padding:8px 12px;background:var(--surface);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.06em">INTEGRATIONS & STACK</td></tr>
+        <tr><td>Salesforce integration</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-part">~</td><td class="feat-yes">✓ (native)</td></tr>
+        <tr><td>HubSpot integration</td><td class="feat-yes">✓</td><td class="feat-part">~</td><td class="feat-yes">✓</td><td class="feat-yes" style="color:var(--win)">✓ Native</td><td class="feat-no">✗</td></tr>
+        <tr><td>Jira integration</td><td class="feat-yes">✓</td><td class="feat-part">~</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-yes">✓</td></tr>
+        <tr><td>Slack integration</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-yes">✓</td></tr>
+
+        <tr><td colspan="6" style="padding:8px 12px;background:var(--surface);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.06em">SECURITY & COMPLIANCE</td></tr>
+        <tr><td>SOC 2 Type I</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-part">~</td><td>N/A</td></tr>
+        <tr><td>SOC 2 Type II</td><td class="feat-warn text-warn">In progress</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td>N/A</td></tr>
+        <tr><td>SSO / SAML</td><td class="feat-part">~ (Enterprise)</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-part">~ (Enterprise)</td><td class="feat-yes">✓</td></tr>
+        <tr><td>GDPR compliance</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td class="feat-yes">✓</td><td>Depends</td></tr>
+
+        <tr><td colspan="6" style="padding:8px 12px;background:var(--surface);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.06em">POST-LIVE (CS MANAGEMENT)</td></tr>
+        <tr><td>Customer health scoring</td><td class="feat-no">✗</td><td class="feat-yes" style="color:var(--win)">✓ Best-in-class</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-part">~</td></tr>
+        <tr><td>Renewal forecasting</td><td class="feat-no">✗</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-part">~</td></tr>
+        <tr><td>QBR management</td><td class="feat-no">✗</td><td class="feat-yes">✓</td><td class="feat-no">✗</td><td class="feat-no">✗</td><td class="feat-part">~</td></tr>
+      </tbody>
+    </table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── VIEW: MESSAGING ────────────────────── -->
+<section class="view" id="view-messaging">
+  <div class="page-header">
+    <div class="page-title">Messaging Comparison</div>
+    <div class="page-sub">How each competitor positions itself — and how we counter</div>
+  </div>
+
+  <div class="ai-box">
+    <p><strong>AI Summary — Messaging:</strong> The most important messaging observation: <strong>no competitor is using "onboarding orchestration" as a primary category name</strong>. Rocketlane now uses "orchestration" as an adjective (May 2025 watch) but hasn't claimed the category. Our window to own the vocabulary is approximately 18 months. The second observation: Gainsight and Rocketlane both lead with outcomes ("faster time-to-value", "reduce churn") while RelayGrid leads with specificity ("45 days to 7"). Specificity is winning in cold outbound — 18% reply rate with the "45 days" claim vs. 9% without. Do not dilute it.</p>
+    <div class="ai-bullets">
+      <div class="ai-bullet">Watch Rocketlane: first use of "orchestration" in May 2025 — monitor for escalation to category claim</div>
+      <div class="ai-bullet">Gainsight AI messaging is vague ("AI-driven insights") vs. our specific use case (dependency-aware sequencing)</div>
+      <div class="ai-bullet">Arrows leads with HubSpot native — we should not compete on CRM nativity, we compete on fintech depth</div>
+    </div>
+  </div>
+
+  <div class="card mb24">
+    <div class="card-header"><h3>Headline Messaging Comparison</h3></div>
+    <div class="card-body" style="padding:0">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Vendor</th><th>Primary Tagline / Headline</th><th>Category Claim</th><th>Key Proof Point</th><th>Tone</th></tr></thead>
+      <tbody>
+        <tr class="highlight-row"><td><strong>RelayGrid</strong></td><td>"Enterprise onboarding in 7 days. Not 45."</td><td>Onboarding orchestration</td><td>45→7 day TTL (avg, n=11)</td><td>Direct, specific, challenger</td></tr>
+        <tr><td>Gainsight</td><td>"CustomerOS for the durable growth era"</td><td>Customer success platform</td><td>Forrester Wave Leader Q4 2025</td><td>Enterprise, analyst-validated</td></tr>
+        <tr><td>Rocketlane</td><td>"Deliver faster time-to-value for customers"</td><td>Client onboarding + PSA</td><td>G2 Leader, 1,000+ customers</td><td>Efficient, collaborative</td></tr>
+        <tr><td>Arrows</td><td>"Onboard customers faster with HubSpot"</td><td>HubSpot-native onboarding</td><td>HungryHungry: 90% churn reduction</td><td>Friendly, HubSpot-centric</td></tr>
+        <tr><td>Salesforce</td><td>"The AI CRM. Built for every industry."</td><td>CRM platform</td><td>Market share / ecosystem</td><td>Platform, enterprise</td></tr>
+      </tbody>
+    </table></div>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><h3>Where Our Messaging Wins</h3><span class="badge badge-win">ADVANTAGE</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Specificity: "45 days to 7"</div><div class="tl-body">No competitor has a comparably specific outcome claim. 18% cold outbound reply rate. Do not dilute with vague language.</div></div>
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">Vertical specificity: "Built for fintech"</div><div class="tl-body">All competitors are generic SaaS. We're the only fintech-specific claim in the category.</div></div>
+          <div class="tl-item"><div class="tl-dot win"></div><div class="tl-title">ARR framing for CROs</div><div class="tl-body">"You signed the customer on day one. Why are you recognizing their revenue on day 45?" — 2x meeting book rate with CRO title.</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h3>Where Competitors Are Ahead</h3><span class="badge badge-warn">GAPS</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Analyst validation</div><div class="tl-body">Gainsight: Forrester Wave Leader. We have no analyst mentions yet. Target: 1 Celent or Forrester mention by Q4 2025.</div></div>
+          <div class="tl-item"><div class="tl-dot warn"></div><div class="tl-title">Customer count as social proof</div><div class="tl-body">Rocketlane claims 1,000+ customers. We have 11. Counter: our customers are enterprise fintech — not SaaS generalists.</div></div>
+          <div class="tl-item"><div class="tl-dot risk"></div><div class="tl-title">Category language spread</div><div class="tl-body">Rocketlane's "orchestration" adoption (May 2025) could dilute our category claim if they escalate. Monitor monthly.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── VIEW: REVIEWS ────────────────────── -->
+<section class="view" id="view-reviews">
+  <div class="page-header">
+    <div class="page-title">Review Intelligence</div>
+    <div class="page-sub">What buyers say about competitors — sourced from G2, Capterra, TrustRadius · May 2025</div>
+  </div>
+
+  <div class="ai-box">
+    <p><strong>AI Summary — Reviews:</strong> Gainsight's review pattern is consistent: powerful platform, painful implementation, complex UI. The phrase "dashboard-digging fatigue" (Alberto S., G2 Enterprise) is a gift — it perfectly describes what we don't do. Use competitor review language in your own positioning. Rocketlane's G2 reviews show complaints about complex onboarding of the platform itself — ironic and useful. Arrows earns high ease-of-use marks but reviewers note it's limited beyond HubSpot-centric use cases. <strong>Key play:</strong> When a prospect says "we've heard good things about Gainsight," ask if they've looked at the implementation timeline reviews specifically.</p>
+  </div>
+
+  <div class="grid-2">
+    <div>
+      <div class="section-hd"><h3>Gainsight CS — G2 4.4/5</h3><div class="line"></div></div>
+      <div class="review-card">
+        <div class="review-header">
+          <span class="review-source">G2 · ENTERPRISE · VERIFIED</span>
+          <span class="stars">★★★☆☆</span>
+        </div>
+        <div class="review-quote">"There is an excessive focus on AI at the expense of addressing basic features, parity issues, and stability problems... The admin community has been requesting these basic improvements for years, yet we are repeatedly told that AI will solve this."</div>
+        <div class="review-meta">Alberto S., Enterprise (1,000+ emp.) · May 2025 · PMM USE: Raise when prospect mentions Gainsight AI capabilities</div>
+      </div>
+      <div class="review-card">
+        <div class="review-header">
+          <span class="review-source">G2 · VERIFIED · INFORMATION TECHNOLOGY</span>
+          <span class="stars">★★★☆☆</span>
+        </div>
+        <div class="review-quote">"Just make sure you have a LOT of dedicated resources to managing the implementation. You need deep commitments from your customer teams, your Salesforce admins, and engineering team for integrations."</div>
+        <div class="review-meta">Verified User, Information Technology · PMM USE: Implementation complexity objection in deals where Gainsight is being evaluated</div>
+      </div>
+      <div class="review-card">
+        <div class="review-header">
+          <span class="review-source">G2 · VERIFIED</span>
+          <span class="stars">★★★★☆</span>
+        </div>
+        <div class="review-quote">"I end up wasting a lot of time updating CTAs because it requires too many clicks. The Success Plan tab is very clunky and not user-friendly."</div>
+        <div class="review-meta">Verified User, 4K+ accounts · PMM USE: UX complexity point in competitive deals</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-hd"><h3>Rocketlane — G2 4.8/5</h3><div class="line"></div></div>
+      <div class="review-card">
+        <div class="review-header">
+          <span class="review-source">G2 · VERIFIED CUSTOMER</span>
+          <span class="stars">★★★☆☆</span>
+        </div>
+        <div class="review-quote">"The onboarding experience with Rocketlane has been overly complex and not tailored to meet our needs. We have to repeat ourselves on nearly every call. Content is repeated frequently and I've come to expect sessions to always go over in time."</div>
+        <div class="review-meta">G2 Verified · PMM USE: Ironic — their onboarding platform has bad onboarding. Use subtly, not mockingly.</div>
+      </div>
+      <div class="review-card">
+        <div class="review-header">
+          <span class="review-source">G2 · VERIFIED</span>
+          <span class="stars">★★★★☆</span>
+        </div>
+        <div class="review-quote">"The customer-facing interface is lacking in ease of use and may create bottlenecks in operations."</div>
+        <div class="review-meta">Verified G2 Customer · PMM USE: Customer portal comparison — our portal is specifically designed for ease on the customer side</div>
+      </div>
+      <div class="section-hd" style="margin-top:20px"><h3>ChurnZero / Alternatives — Pattern</h3><div class="line"></div></div>
+      <div class="review-card">
+        <div class="review-header">
+          <span class="review-source">G2 · CLIENT EDUCATION MANAGER</span>
+          <span class="stars">★★★☆☆</span>
+        </div>
+        <div class="review-quote">"Setting up our ChurnZero instance has involved a significant amount of manual administration. The data transfer from our CRM to Salesforce is not straightforward, which has forced us to create numerous workarounds."</div>
+        <div class="review-meta">Brandon O., Client Education Manager · Pattern: all CS platforms have configuration complexity. We have 11-day time-to-value.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────────── VIEW: SIGNALS ────────────────────── -->
+<section class="view" id="view-signals">
+  <div class="page-header">
+    <div class="page-title">Signals & Feature Changes</div>
+    <div class="page-sub">Product changes, messaging shifts, pricing updates, and market signals — rolling log</div>
+  </div>
+
+  <div class="ai-box">
+    <p><strong>AI Summary — Signals:</strong> Three signals are worth immediate attention: (1) Rocketlane's "orchestration" language adoption in May 2025 — the first sign of category language drift toward our positioning; (2) Salesforce AgentForce's autonomous agent announcement — low probability but high consequence if it develops onboarding use cases; (3) Gainsight's Salesforce OAuth security incident — a proactive talking point in deals where Gainsight is the incumbent. The Arrows dynamic branching launch (March 2025) is notable but not threatening to our ICP. Track: Rocketlane's fintech vertical page launch, any AI orchestration positioning from Salesforce.</p>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><h3>🚨 High Priority Signals</h3></div>
+      <div class="card-body">
+        <div class="alert risk">
+          <div class="alert-icon">🔴</div>
+          <div>
+            <div class="alert-body"><strong>Rocketlane adopts "orchestration" language</strong><br>Website updated with "implementation orchestration" phrasing. First time a direct competitor has used our category vocabulary. Monitor for: (a) fintech vertical page, (b) "onboarding orchestration" headline adoption.</div>
+            <div class="alert-date">May 2025 · Source: Rocketlane.com direct review</div>
+          </div>
+        </div>
+        <div class="alert risk">
+          <div class="alert-icon">🔴</div>
+          <div>
+            <div class="alert-body"><strong>Gainsight / Salesforce OAuth security incident</strong><br>Salesforce revoked OAuth tokens for Gainsight-published apps in April 2025. Both companies investigating. Active customer concern. Raise in deals where Gainsight is the incumbent or under evaluation as a vendor risk.</div>
+            <div class="alert-date">April 2025 · Source: Reuters / support.gainsight.com</div>
+          </div>
+        </div>
+        <div class="alert warn">
+          <div class="alert-icon">🟡</div>
+          <div>
+            <div class="alert-body"><strong>Salesforce AgentForce: Autonomous CS Agents</strong><br>Announced autonomous agents for CS and service use cases. No onboarding orchestration positioning confirmed. Monitor roadmap announcements at Dreamforce 2025. If they target pre-live onboarding, threat level increases to HIGH.</div>
+            <div class="alert-date">Q1 2025 · Source: Salesforce announcements</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h3>📋 Feature & Product Changes</h3></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot win"></div>
+            <div class="tl-date">March 2025</div>
+            <div class="tl-title">Arrows: Dynamic branching launched (Business plan)</div>
+            <div class="tl-body">Conditional task routing based on customer type. Narrows feature gap with Rocketlane. No impact on RelayGrid ICP — no fintech compliance layer. Filed as: monitor.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot warn"></div>
+            <div class="tl-date">Q4 2024</div>
+            <div class="tl-title">Gainsight: Staircase AI EU data center</div>
+            <div class="tl-body">Expanded EU data residency for Staircase AI module. Indicates Gainsight is investing in international expansion. No direct impact — we're US-focused until H2 2025.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot warn"></div>
+            <div class="tl-date">2023</div>
+            <div class="tl-title">Gainsight acquired Skilljar</div>
+            <div class="tl-body">Customer education platform added to Gainsight suite. Broadens their post-live platform. No pre-live onboarding impact — further confirms their post-live focus.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot neu"></div>
+            <div class="tl-date">Ongoing</div>
+            <div class="tl-title">Rocketlane: SmartFill AI feature</div>
+            <div class="tl-body">Autofills project metadata and status updates. Not orchestration — it's form-filling AI. Our AI Workflow Engine is dependency-aware sequencing. Different problem.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb24">
+    <div class="card-header"><h3>🔭 Watch List — Next 90 Days</h3></div>
+    <div class="card-body">
+    <div class="table-wrap"><table>
+      <thead><tr><th>Item</th><th>Watch For</th><th>Threat if True</th><th>Owner</th><th>Next Check</th></tr></thead>
+      <tbody>
+        <tr><td>Rocketlane website</td><td>Fintech vertical page or "onboarding orchestration" headline</td><td class="text-risk"><strong>HIGH</strong></td><td>PMM</td><td class="mono">Jun 1, 2025</td></tr>
+        <tr><td>Salesforce AgentForce</td><td>Pre-live onboarding use case positioning at Dreamforce 2025</td><td class="text-risk"><strong>HIGH</strong></td><td>PMM</td><td class="mono">Dreamforce 2025</td></tr>
+        <tr><td>Gainsight security incident</td><td>Resolution status and any customer attrition from the Salesforce OAuth incident</td><td class="text-warn"><strong>MED</strong></td><td>PMM + CS</td><td class="mono">Jun 1, 2025</td></tr>
+        <tr><td>Notion AI</td><td>Workflow automation with accountability — could threaten ops-layer positioning</td><td class="text-warn"><strong>MED</strong></td><td>PMM</td><td class="mono">Aug 1, 2025</td></tr>
+        <tr><td>New entrant: $5M+ fintech onboarding raise</td><td>Any company raising and naming "fintech onboarding" in their pitch (TechCrunch)</td><td class="text-risk"><strong>HIGH</strong></td><td>PMM</td><td class="mono">Monthly</td></tr>
+        <tr><td>G2 review volume</td><td>RelayGrid needs 10+ verified G2 reviews for category credibility. Currently: 0.</td><td class="text-warn"><strong>MED</strong></td><td>CS + PMM</td><td class="mono">Jul 1, 2025</td></tr>
+      </tbody>
+    </table></div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<script>
+  function showView(id) {
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('view-' + id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function showProfile(id) {
+    document.querySelectorAll('.profile').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.comp-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('profile-' + id).classList.add('active');
+    event.target.classList.add('active');
+  }
+
+  function filterComp(id) {
+    document.querySelectorAll('.comp-chip').forEach(c => c.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+  }
+</script>
+</body>
+</html>
