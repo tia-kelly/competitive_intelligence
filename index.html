@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RelayGrid — Competitive Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -32,12 +35,12 @@
     --risk:      #f85149;
     --neu:       #8b949e;
 
-    --font: Arial, "Helvetica Neue", Helvetica, sans-serif;
+    --font: "Poppins", Arial, "Helvetica Neue", Helvetica, sans-serif;
     --mono: "Courier New", Courier, monospace;
     --radius: 6px;
   }
 
-  html { scroll-behavior: smooth; }
+  html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 
   body {
     font-family: var(--font);
@@ -51,7 +54,7 @@
   /* ── TOP BAR ── */
   .topbar {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(10,10,10,.95);
+    background: color-mix(in srgb, var(--bg) 95%, transparent);
     backdrop-filter: blur(8px);
     border-bottom: 1px solid var(--border);
     display: flex; align-items: center;
@@ -70,7 +73,8 @@
   .topbar-meta { font-size: 11px; color: var(--dim); white-space: nowrap; }
 
   /* ── LAYOUT ── */
-  .shell { display: grid; grid-template-columns: 200px 1fr; min-height: calc(100vh - 52px); }
+  /* minmax(0,1fr) lets the main column shrink instead of being stretched by wide tables */
+  .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: calc(100vh - 52px); }
 
   /* ── SIDEBAR ── */
   .sidebar {
@@ -132,10 +136,10 @@
   }
   .card-header h3 { font-size: 13px; font-weight: 700; color: var(--white); flex: 1; }
   .card-header .badge { font-size: 10px; padding: 2px 8px; border-radius: 20px; font-weight: 600; }
-  .badge-win  { background: rgba(57,211,83,.15);  color: var(--win);  border: 1px solid rgba(57,211,83,.3); }
-  .badge-warn { background: rgba(240,180,41,.12); color: var(--warn); border: 1px solid rgba(240,180,41,.3); }
-  .badge-risk { background: rgba(248,81,73,.12);  color: var(--risk); border: 1px solid rgba(248,81,73,.3); }
-  .badge-neu  { background: rgba(139,148,158,.12);color: var(--neu);  border: 1px solid rgba(139,148,158,.3); }
+  .badge-win  { background: color-mix(in srgb, var(--win)  15%, transparent); color: var(--win);  border: 1px solid color-mix(in srgb, var(--win)  30%, transparent); }
+  .badge-warn { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); }
+  .badge-risk { background: color-mix(in srgb, var(--risk) 12%, transparent); color: var(--risk); border: 1px solid color-mix(in srgb, var(--risk) 30%, transparent); }
+  .badge-neu  { background: color-mix(in srgb, var(--neu)  12%, transparent); color: var(--neu);  border: 1px solid color-mix(in srgb, var(--neu)  30%, transparent); }
   .card-body { padding: 16px; }
 
   /* ── COMPETITOR PROFILE CARD ── */
@@ -167,18 +171,18 @@
   }
   tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
   tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: rgba(255,255,255,.025); }
+  tbody tr:hover { background: color-mix(in srgb, var(--white) 2.5%, transparent); }
   tbody td { padding: 10px 12px; color: var(--text); vertical-align: top; }
   tbody td.muted { color: var(--muted); }
   tbody td.mono { font-family: var(--mono); color: var(--muted); font-size: 11px; }
-  .highlight-row { background: rgba(255,255,255,.03); }
+  .highlight-row { background: color-mix(in srgb, var(--white) 3%, transparent); }
 
   /* ── PILL TAG ── */
   .tag { display: inline-block; font-size: 10px; padding: 2px 7px; border-radius: 3px; font-weight: 600; }
-  .tag-win  { background: rgba(57,211,83,.15);  color: var(--win); }
-  .tag-warn { background: rgba(240,180,41,.12); color: var(--warn); }
-  .tag-risk { background: rgba(248,81,73,.12);  color: var(--risk); }
-  .tag-neu  { background: rgba(139,148,158,.12);color: var(--neu); }
+  .tag-win  { background: color-mix(in srgb, var(--win)  15%, transparent); color: var(--win); }
+  .tag-warn { background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--warn); }
+  .tag-risk { background: color-mix(in srgb, var(--risk) 12%, transparent); color: var(--risk); }
+  .tag-neu  { background: color-mix(in srgb, var(--neu)  12%, transparent); color: var(--neu); }
 
   /* ── FEATURE MATRIX ── */
   .feat-yes  { color: var(--win);  font-size: 14px; }
@@ -266,9 +270,9 @@
     padding: 12px 14px; border-radius: var(--radius); margin-bottom: 8px;
     border: 1px solid;
   }
-  .alert.risk  { background: rgba(248,81,73,.08);  border-color: rgba(248,81,73,.25); }
-  .alert.warn  { background: rgba(240,180,41,.07); border-color: rgba(240,180,41,.25); }
-  .alert.info  { background: rgba(88,166,255,.07); border-color: rgba(88,166,255,.25); }
+  .alert.risk  { background: color-mix(in srgb, var(--risk)   8%, transparent); border-color: color-mix(in srgb, var(--risk)   25%, transparent); }
+  .alert.warn  { background: color-mix(in srgb, var(--warn)   7%, transparent); border-color: color-mix(in srgb, var(--warn)   25%, transparent); }
+  .alert.info  { background: color-mix(in srgb, var(--rocket) 7%, transparent); border-color: color-mix(in srgb, var(--rocket) 25%, transparent); }
   .alert-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
   .alert-body { font-size: 12px; color: var(--text); line-height: 1.5; }
   .alert-body strong { color: var(--white); }
@@ -308,6 +312,117 @@
   .text-risk { color: var(--risk); }
   .text-muted { color: var(--muted); }
   .text-sm { font-size: 11px; }
+
+  /* ═══════════════════════════════════════════
+     RESPONSIVE / MOBILE
+     Breakpoints: 1400 (hide meta) · 1200 (topbar + sidebar collapse)
+                  900 (single-column grids) · 600 (phone)
+  ═══════════════════════════════════════════ */
+
+  body { overflow-wrap: break-word; }
+
+  /* Toggle button for the collapsed sidebar — hidden on desktop */
+  .sidebar-toggle { display: none; }
+
+  /* Let grid children shrink so wide tables scroll inside their card instead of stretching the page */
+  .grid-2 > *, .grid-3 > *, .stat-row > * { min-width: 0; }
+  .table-wrap { -webkit-overflow-scrolling: touch; }
+
+  @media (max-width: 1400px) {
+    .topbar-meta { display: none; }
+  }
+
+  /* ── Tablet / small laptop ── */
+  @media (max-width: 1200px) {
+    /* Topbar: brand on row 1, scrollable nav tabs on row 2 */
+    .topbar { flex-wrap: wrap; height: auto; padding: 10px 0 0; gap: 8px 0; }
+    .topbar-brand { flex: 1 1 auto; padding: 0 16px; font-size: 12px; }
+    .topbar-nav {
+      order: 3; flex: 0 0 100%; padding: 0 16px 8px;
+      overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+    }
+    .topbar-nav::-webkit-scrollbar { display: none; }
+    .nav-btn { flex-shrink: 0; padding: 8px 14px; }
+
+    /* Layout: single column, sidebar becomes a collapsible panel above the content */
+    .shell { grid-template-columns: minmax(0, 1fr); min-height: 0; }
+    .sidebar {
+      position: static; height: auto; overflow: visible;
+      border-right: none; border-bottom: 1px solid var(--border); padding: 0;
+    }
+    .sidebar-toggle {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; padding: 12px 24px; background: transparent; border: none;
+      color: var(--text); font-family: var(--font); font-size: 12px; font-weight: 600;
+      cursor: pointer;
+    }
+    .sidebar-toggle .chev { color: var(--muted); transition: transform .2s; }
+    .sidebar.open .sidebar-toggle .chev { transform: rotate(180deg); }
+    .sidebar:not(.open) .sidebar-content { display: none; }
+    .sidebar-content { padding: 4px 8px 14px; }
+
+    .sidebar-section.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .sidebar-section.chips .sidebar-label { flex: 0 0 100%; margin-bottom: 2px; }
+    .comp-chip { border: 1px solid var(--border); margin-bottom: 0; padding: 8px 12px; }
+    .comp-chip .threat { margin-left: 8px; }
+    .winrates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 20px; }
+    .last-updated { padding: 0 16px; }
+
+    .main { padding: 24px; }
+  }
+
+  /* ── Tablet portrait ── */
+  @media (max-width: 900px) {
+    .grid-2, .grid-3 { grid-template-columns: minmax(0, 1fr); }
+    .stat-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+    /* Wide data tables scroll sideways inside their card */
+    .table-wrap table { min-width: 600px; }
+
+    /* Feature matrix: keep the feature name pinned while scrolling sideways */
+    #view-features .table-wrap table { min-width: 680px; }
+    #view-features thead th:first-child,
+    #view-features tbody td:first-child:not([colspan]) {
+      position: sticky; left: 0; z-index: 1;
+      background: var(--card); min-width: 150px !important;
+      box-shadow: 1px 0 0 var(--border);
+    }
+  }
+
+  /* ── Phone ── */
+  @media (max-width: 600px) {
+    .main { padding: 16px 14px 32px; }
+    .sidebar-toggle { padding: 12px 16px; }
+
+    .page-header { margin-bottom: 20px; }
+    .page-title { font-size: 18px; line-height: 1.3; }
+    .page-sub { font-size: 12px; }
+
+    .stat-row { gap: 10px; margin-bottom: 20px; }
+    .stat-card { padding: 12px; }
+    .stat-card .label { font-size: 10px; }
+    .stat-card .value { font-size: 22px; }
+
+    .grid-2, .grid-3 { gap: 14px; margin-bottom: 14px; }
+    .card-header { flex-wrap: wrap; padding: 12px 14px 10px; }
+    .card-header .badge { white-space: nowrap; }
+    .card-body { padding: 14px; }
+    .comp-header { padding: 14px; gap: 12px; }
+    .comp-meta { gap: 6px; }
+    .ai-box { padding: 14px; }
+    .comp-tab { padding: 8px 14px; }
+
+    /* Key/value tables (profile facts) stack: label above value */
+    .card-body > table,
+    .card-body > table tbody,
+    .card-body > table tr,
+    .card-body > table td { display: block; width: 100% !important; }
+    .card-body > table tr { padding: 10px 0; }
+    .card-body > table td { padding: 0; }
+    .card-body > table td.muted {
+      font-size: 10px; text-transform: uppercase; letter-spacing: .05em; margin-bottom: 2px;
+    }
+  }
 </style>
 </head>
 <body>
@@ -330,8 +445,12 @@
 <div class="shell">
 
 <!-- ═══════════════════════════════════════════ SIDEBAR -->
-<aside class="sidebar">
-  <div class="sidebar-section">
+<aside class="sidebar" id="sidebar">
+  <button class="sidebar-toggle" type="button" onclick="toggleSidebar()" aria-expanded="false" aria-controls="sidebar-content">
+    <span>Competitors &amp; win rates</span><span class="chev">▾</span>
+  </button>
+  <div class="sidebar-content" id="sidebar-content">
+  <div class="sidebar-section chips">
     <div class="sidebar-label">Competitors</div>
     <div class="comp-chip active" onclick="filterComp('all')">
       <div class="dot" style="background:var(--muted)"></div>
@@ -368,7 +487,7 @@
 
   <div class="sidebar-section">
     <div class="sidebar-label">Win Rates vs.</div>
-    <div style="padding: 0 2px;">
+    <div class="winrates" style="padding: 0 2px;">
       <div class="prog-row">
         <div class="prog-label"><span>Gainsight</span><span class="val text-win">71%</span></div>
         <div class="prog-track"><div class="prog-fill" style="width:71%;background:var(--win)"></div></div>
@@ -390,6 +509,7 @@
 
   <hr class="sidebar-divider">
   <div class="last-updated">Last full review: May 14, 2025<br>Next review: Aug 1, 2025</div>
+  </div><!-- /.sidebar-content -->
 </aside>
 
 <!-- ═══════════════════════════════════════════ MAIN -->
@@ -1091,6 +1211,15 @@
     document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('view-' + id).classList.add('active');
     event.target.classList.add('active');
+    // Mobile: keep the tapped tab visible in the scrolling nav, and jump back to the top of the new view
+    event.target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    window.scrollTo({ top: 0 });
+  }
+
+  function toggleSidebar() {
+    const sb = document.getElementById('sidebar');
+    const open = sb.classList.toggle('open');
+    sb.querySelector('.sidebar-toggle').setAttribute('aria-expanded', open);
   }
 
   function showProfile(id) {
